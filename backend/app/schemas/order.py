@@ -40,6 +40,7 @@ class OrderOut(ORMBase):
     currency: str
     payment_ref: str | None
     created_at: datetime
+    paid_at: datetime | None
     items: List[OrderItemOut]
 
 

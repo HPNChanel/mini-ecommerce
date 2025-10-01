@@ -32,7 +32,7 @@ export function OrderDetailPage(): JSX.Element {
       <section className="mx-auto w-full max-w-5xl space-y-6 px-4 py-12 md:px-6">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-semibold text-slate-900">Order {order.id.slice(0, 8)}</h1>
+          <h1 className="text-3xl font-semibold text-slate-900">Order {String(order.id).slice(0, 8)}</h1>
             <p className="text-sm text-slate-500">Placed on {new Date(order.createdAt).toLocaleString()}</p>
             <p className="text-sm text-slate-500">Status: <span className="capitalize">{order.status}</span></p>
           </div>

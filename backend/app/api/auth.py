@@ -1,7 +1,7 @@
 """Authentication endpoints."""
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Response, status
 
 from ..core.deps import get_auth_service, rate_limit
 from ..schemas.auth import (
@@ -36,6 +36,11 @@ async def refresh(payload: RefreshRequest, service=Depends(get_auth_service)):
     return RefreshResponse(access_token=tokens["access_token"], expires_in=tokens["expires_in"])
 
 
-@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(rate_limit)])
+@router.post(
+    "/logout",
+    status_code=status.HTTP_200_OK,
+    response_class=Response,
+    dependencies=[Depends(rate_limit)],
+)
 async def logout(payload: LogoutRequest, service=Depends(get_auth_service)) -> None:
     await service.logout(payload.refresh_token)

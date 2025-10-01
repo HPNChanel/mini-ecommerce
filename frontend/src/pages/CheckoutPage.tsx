@@ -1,9 +1,9 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "../lib/zodResolver";
 import { z } from "zod";
-import { createOrder } from "../api/orders";
+import { checkoutCart, confirmMockPayment, type CheckoutResponse } from "../api/orders";
 import { useCart } from "../hooks/useCart";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -26,9 +26,14 @@ const checkoutSchema = z.object({
 
 type CheckoutValues = z.infer<typeof checkoutSchema>;
 
+type PaymentStatus = "idle" | "authorizing" | "confirming" | "success" | "error";
+
 export function CheckoutPage(): JSX.Element {
   const { cart, isLoading, clear } = useCart();
   const navigate = useNavigate();
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("idle");
+  const [checkoutData, setCheckoutData] = useState<CheckoutResponse | null>(null);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
   const form = useForm<CheckoutValues>({
     resolver: zodResolver(checkoutSchema),
     defaultValues: {
@@ -59,22 +64,48 @@ export function CheckoutPage(): JSX.Element {
     );
   }
 
-  const handleSubmit = async (values: CheckoutValues) => {
-    const order = await createOrder({
-      fullName: values.fullName,
-      email: values.email,
-      phone: values.phone,
-      line1: values.line1,
-      line2: values.line2,
-      city: values.city,
-      state: values.state,
-      postalCode: values.postalCode,
-      country: values.country
-    });
-    showSuccessToast("Payment authorized. Thank you for your order!");
-    await clear();
-    navigate(`/orders/${order.id}`);
+  const handleSubmit = async (_values: CheckoutValues) => {
+    setPaymentError(null);
+    if (!Number.isFinite(cart.id)) {
+      setPaymentStatus("error");
+      setPaymentError("Cart is unavailable. Please refresh and try again.");
+      return;
+    }
+    setPaymentStatus("authorizing");
+    try {
+      const data = await checkoutCart(cart.id);
+      setCheckoutData(data);
+    } catch (error) {
+      console.error(error);
+      setPaymentStatus("error");
+      setPaymentError("Unable to initiate payment. Please try again.");
+    }
   };
+
+  useEffect(() => {
+    if (paymentStatus !== "authorizing" || !checkoutData) {
+      return;
+    }
+
+    const timer = window.setTimeout(async () => {
+      setPaymentStatus("confirming");
+      try {
+        const order = await confirmMockPayment(checkoutData.paymentRef);
+        setPaymentStatus("success");
+        showSuccessToast("Payment confirmed. Thank you for your order!");
+        await clear();
+        navigate(`/orders/${order.id}`);
+      } catch (error) {
+        console.error(error);
+        setPaymentStatus("error");
+        setPaymentError("Payment confirmation failed. Please contact support.");
+      }
+    }, 2000);
+
+    return () => window.clearTimeout(timer);
+  }, [checkoutData, clear, navigate, paymentStatus]);
+
+  const isPaymentProcessing = paymentStatus === "authorizing" || paymentStatus === "confirming";
 
   return (
     <div className="bg-slate-50">
@@ -155,8 +186,12 @@ export function CheckoutPage(): JSX.Element {
               <Label htmlFor="notes">Order notes (optional)</Label>
               <Textarea id="notes" className="mt-2" rows={4} {...form.register("notes")} />
             </div>
-            <Button type="submit" className="mt-4 rounded-full py-3 text-base font-semibold" disabled={form.formState.isSubmitting}>
-              {form.formState.isSubmitting ? "Processing…" : `Pay $${cart.total.toFixed(2)}`}
+            <Button
+              type="submit"
+              className="mt-4 rounded-full py-3 text-base font-semibold"
+              disabled={form.formState.isSubmitting || isPaymentProcessing}
+            >
+              {form.formState.isSubmitting || isPaymentProcessing ? "Processing…" : `Pay $${cart.total.toFixed(2)}`}
             </Button>
           </form>
         </div>
@@ -190,7 +225,33 @@ export function CheckoutPage(): JSX.Element {
               <span>${cart.total.toFixed(2)}</span>
             </div>
           </div>
-          <p className="text-xs text-slate-500">Payments are securely simulated for this demo experience.</p>
+          {paymentStatus === "idle" ? (
+            <p className="text-xs text-slate-500">Payments are securely simulated for this demo experience.</p>
+          ) : (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm">
+              <p className="font-semibold text-slate-900">Mock payment widget</p>
+              <p className="mt-1 text-xs text-slate-500">
+                {paymentStatus === "authorizing"
+                  ? "Authorizing your payment..."
+                  : paymentStatus === "confirming"
+                    ? "Confirming payment with the provider..."
+                    : paymentStatus === "success"
+                      ? "Payment successful!"
+                      : "Payment failed."}
+              </p>
+              {checkoutData ? (
+                <div className="mt-3 rounded-xl bg-white p-3 text-xs text-slate-500">
+                  <p>
+                    <span className="font-semibold text-slate-900">Payment reference:</span> {checkoutData.paymentRef}
+                  </p>
+                  <p className="mt-1 break-all">
+                    <span className="font-semibold text-slate-900">Client secret:</span> {checkoutData.clientSecret}
+                  </p>
+                </div>
+              ) : null}
+              {paymentError ? <p className="mt-3 text-xs text-red-500">{paymentError}</p> : null}
+            </div>
+          )}
         </aside>
       </section>
     </div>

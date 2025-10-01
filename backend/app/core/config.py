@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=15, ge=1, le=1440)
     REFRESH_TOKEN_EXPIRE_DAYS: int = Field(default=7, ge=1, le=30)
 
+    PAYMENT_WEBHOOK_SECRET: str = Field(validation_alias="PAYMENT_WEBHOOK_SECRET")
+
     FRONTEND_ORIGIN: AnyHttpUrl
     BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = Field(default_factory=list)
 

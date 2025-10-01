@@ -1,6 +1,7 @@
 import type { AxiosRequestConfig } from "axios";
 import MockAdapter from "axios-mock-adapter";
 import { apiClient } from "./client";
+import { env } from "../config/env";
 import type {
   Address,
   AuthTokens,
@@ -25,6 +26,7 @@ interface CartItemRecord {
 }
 
 interface CartRecord {
+  id: number;
   items: CartItemRecord[];
 }
 
@@ -225,7 +227,7 @@ function extractTokenFromConfig(config: AxiosRequestConfig): string | null {
 
 function ensureCart(userId: string): CartRecord {
   if (!carts.has(userId)) {
-    carts.set(userId, { items: [] });
+    carts.set(userId, { id: carts.size + 1, items: [] });
   }
   return carts.get(userId) as CartRecord;
 }
@@ -251,6 +253,7 @@ function buildCartSummary(userId: string): CartSummary {
   const total = Math.round((subtotal + tax) * 100) / 100;
 
   return {
+    id: cart.id,
     items: definedItems,
     subtotal,
     tax,
@@ -399,17 +402,19 @@ function createOrderFromCart(user: UserRecord, address: Address): Order {
   const order: Order = {
     id: crypto.randomUUID(),
     userId: user.id,
-    status: "processing",
+    status: "pending",
     items: orderItems,
     subtotal,
     tax,
     total,
     currency: "USD",
     createdAt: new Date().toISOString(),
-    address
+    address,
+    paymentRef: `pay_${crypto.randomUUID().slice(0, 8)}`,
+    paidAt: null
   };
   orders.unshift(order);
-  carts.set(user.id, { items: [] });
+  carts.set(user.id, { id: cart.id, items: [] });
   return order;
 }
 
@@ -621,10 +626,42 @@ export function setupMockServer(): void {
   mockAdapter.onDelete(/\/cart$/).reply((config) => {
     try {
       const user = ensureAuthenticated(config);
-      carts.set(user.id, { items: [] });
+      const cart = ensureCart(user.id);
+      cart.items = [];
       return [200, buildCartSummary(user.id)];
     } catch {
       return [401, { detail: "Unauthorized" }];
+    }
+  });
+
+  mockAdapter.onPost(/\/checkout/).reply((config) => {
+    try {
+      const user = ensureAuthenticated(config);
+      const payload = parseBody<{ cart_id?: number }>(config.data);
+      const cart = ensureCart(user.id);
+      if (cart.items.length === 0) {
+        return [400, { detail: "Your cart is empty" }];
+      }
+      if (typeof payload.cart_id === "number" && payload.cart_id !== cart.id) {
+        return [400, { detail: "Cart mismatch" }];
+      }
+      const order = createOrderFromCart(user, {
+        fullName: user.name,
+        email: user.email,
+        phone: "000-000-0000",
+        line1: "123 Mockingbird Lane",
+        city: "Mock City",
+        state: "CA",
+        postalCode: "00000",
+        country: "USA"
+      });
+      const clientSecret = crypto.randomUUID().replace(/-/g, "");
+      return [201, { order_id: order.id, payment_ref: order.paymentRef, client_secret: clientSecret }];
+    } catch (error) {
+      if ((error as Error).message === "Unauthorized") {
+        return [401, { detail: "Unauthorized" }];
+      }
+      return [400, { detail: (error as Error).message }];
     }
   });
 
@@ -692,10 +729,31 @@ export function setupMockServer(): void {
         return [404, { detail: "Order not found" }];
       }
       order.status = payload.status;
+      if (payload.status === "paid") {
+        order.paidAt = order.paidAt ?? new Date().toISOString();
+      }
       return [200, order];
     } catch {
       return [401, { detail: "Unauthorized" }];
     }
+  });
+
+  mockAdapter.onPost(/\/webhooks\/mock-payments/).reply((config) => {
+    const signature =
+      config.headers?.["x-mockpay-signature"] ?? config.headers?.["X-Mockpay-Signature"] ?? config.headers?.["X-MockPay-Signature"];
+    if (signature !== env.mockPaymentSecret) {
+      return [401, { detail: "Invalid signature" }];
+    }
+    const payload = parseBody<{ payment_ref: string }>(config.data);
+    const order = orders.find((item) => item.paymentRef === payload.payment_ref);
+    if (!order) {
+      return [404, { detail: "Order not found" }];
+    }
+    if (order.status !== "paid") {
+      order.status = "paid";
+      order.paidAt = new Date().toISOString();
+    }
+    return [200, order];
   });
 
   mockAdapter.onPost(/\/auth\/logout/).reply((config) => {
