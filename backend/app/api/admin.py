@@ -75,3 +75,14 @@ async def update_order_status(
     order = await service.transition_status(order, status)
     logger.info("order_status_updated", extra={"order_id": order.id, "status": order.status, "admin_id": admin.id})
     return OrderOut.model_validate(order)
+
+
+@router.post("/payments/replay/{payment_ref}", response_model=OrderOut)
+async def replay_payment(
+    payment_ref: str,
+    service=Depends(get_order_service),
+    admin=Depends(require_admin),
+):
+    order = await service.mark_paid(payment_ref)
+    logger.info("payment_replayed", extra={"payment_ref": payment_ref, "order_id": order.id, "admin_id": admin.id})
+    return OrderOut.model_validate(order)

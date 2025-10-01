@@ -28,6 +28,7 @@ class Order(Base):
     currency = Column(String(3), nullable=False, default="USD")
     payment_ref = Column(String(100), unique=True, nullable=True, index=True)
     created_at = Column(DateTime, default=dt.datetime.utcnow, nullable=False)
+    paid_at = Column(DateTime, nullable=True)
 
     user = relationship("User", back_populates="orders")
     items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")

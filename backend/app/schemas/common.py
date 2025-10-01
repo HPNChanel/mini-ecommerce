@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Generic, Optional, Sequence, TypeVar
 
 from pydantic import BaseModel, ConfigDict
+from pydantic.generics import GenericModel
 
 
 T = TypeVar("T")
@@ -14,7 +15,7 @@ class ORMBase(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class Paginated(Generic[T], BaseModel):
+class Paginated(GenericModel, Generic[T]):
     items: Sequence[T]
     total: int
     page: int

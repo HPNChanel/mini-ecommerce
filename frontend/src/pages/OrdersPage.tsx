@@ -6,7 +6,12 @@ import { LoadingState } from "../components/shared/LoadingState";
 import { Button } from "../components/ui/button";
 
 export function OrdersPage(): JSX.Element {
-  const ordersQuery = useQuery({ queryKey: ["orders"], queryFn: fetchOrders });
+  const ordersQuery = useQuery({
+    queryKey: ["orders"],
+    queryFn: fetchOrders,
+    refetchInterval: 5000,
+    refetchIntervalInBackground: true
+  });
 
   if (ordersQuery.isLoading) {
     return <LoadingState message="Loading orders" />;
@@ -43,7 +48,7 @@ export function OrdersPage(): JSX.Element {
               className="flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:border-slate-900 hover:shadow-md md:flex-row md:items-center md:justify-between"
             >
               <div>
-                <h2 className="text-base font-semibold text-slate-900">Order {order.id.slice(0, 8)}</h2>
+                <h2 className="text-base font-semibold text-slate-900">Order {String(order.id).slice(0, 8)}</h2>
                 <p className="text-sm text-slate-500">Placed on {new Date(order.createdAt).toLocaleDateString()}</p>
               </div>
               <div className="text-right text-sm text-slate-500">

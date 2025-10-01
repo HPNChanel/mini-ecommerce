@@ -49,6 +49,7 @@ export interface CartItem {
 }
 
 export interface CartSummary {
+  id: number;
   items: CartItem[];
   subtotal: number;
   tax: number;
@@ -68,7 +69,7 @@ export interface Address {
   country: string;
 }
 
-export type OrderStatus = "processing" | "fulfilled" | "cancelled";
+export type OrderStatus = "pending" | "paid" | "shipped" | "completed" | "cancelled";
 
 export interface OrderItem {
   id: string;
@@ -89,6 +90,8 @@ export interface Order {
   currency: string;
   createdAt: string;
   address: Address;
+  paymentRef?: string;
+  paidAt?: string | null;
 }
 
 export interface ProductsQuery {

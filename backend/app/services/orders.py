@@ -1,6 +1,7 @@
 """Order service."""
 from __future__ import annotations
 
+import datetime as dt
 import secrets
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -72,10 +73,15 @@ class OrderService:
         if not order:
             raise not_found("Order not found")
         if order.status == OrderStatus.paid:
+            if not order.paid_at:
+                order.paid_at = dt.datetime.utcnow()
+                await self.session.flush()
             return order
         if order.status not in {OrderStatus.pending, OrderStatus.cancelled}:
             return order
         order.status = OrderStatus.paid
+        if not order.paid_at:
+            order.paid_at = dt.datetime.utcnow()
         await self.session.flush()
         return order
 

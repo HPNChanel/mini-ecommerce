@@ -18,6 +18,7 @@ os.environ.setdefault("FRONTEND_ORIGIN", "http://localhost:5173")
 os.environ.setdefault("ACCESS_TOKEN_EXPIRE_MINUTES", "15")
 os.environ.setdefault("REFRESH_TOKEN_EXPIRE_DAYS", "7")
 os.environ.setdefault("METRICS_ENABLED", "0")
+os.environ.setdefault("PAYMENT_WEBHOOK_SECRET", "test-shared-secret")
 
 from app.main import app  # noqa: E402
 from app.db.session import Base, async_session_factory, engine

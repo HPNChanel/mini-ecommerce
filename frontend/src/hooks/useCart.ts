@@ -50,6 +50,7 @@ export function useCart() {
       optimisticUpdate((current) => {
         const base: CartSummary =
           current ?? {
+            id: 0,
             items: [],
             subtotal: 0,
             tax: 0,
@@ -159,7 +160,9 @@ export function useCart() {
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: CART_QUERY_KEY });
       const previous = queryClient.getQueryData<CartSummary>(CART_QUERY_KEY);
+      const current = queryClient.getQueryData<CartSummary>(CART_QUERY_KEY);
       queryClient.setQueryData<CartSummary>(CART_QUERY_KEY, {
+        id: current?.id ?? 0,
         items: [],
         subtotal: 0,
         tax: 0,

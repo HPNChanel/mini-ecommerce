@@ -258,7 +258,7 @@ export function AdminPage(): JSX.Element {
                   <div key={order.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-semibold text-slate-900">Order {order.id.slice(0, 8)}</p>
+                        <p className="text-sm font-semibold text-slate-900">Order {String(order.id).slice(0, 8)}</p>
                         <p className="text-xs text-slate-500">{new Date(order.createdAt).toLocaleString()}</p>
                       </div>
                       <span className="text-sm font-semibold text-slate-900">${order.total.toFixed(2)}</span>
@@ -268,11 +268,15 @@ export function AdminPage(): JSX.Element {
                     </div>
                     <Select
                       value={order.status}
-                      onChange={(event) => statusMutation.mutate({ orderId: order.id, status: event.target.value as OrderStatus })}
+                      onChange={(event) =>
+                        statusMutation.mutate({ orderId: order.id, status: event.target.value as OrderStatus })
+                      }
                       className="mt-3 rounded-full border-slate-300"
                     >
-                      <option value="processing">Processing</option>
-                      <option value="fulfilled">Fulfilled</option>
+                      <option value="pending">Pending</option>
+                      <option value="paid">Paid</option>
+                      <option value="shipped">Shipped</option>
+                      <option value="completed">Completed</option>
                       <option value="cancelled">Cancelled</option>
                     </Select>
                   </div>
