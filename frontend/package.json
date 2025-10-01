@@ -11,14 +11,21 @@
     "test": "vitest"
   },
   "dependencies": {
-    "@radix-ui/react-slot": "^1.0.2",
     "@tanstack/react-query": "^5.28.7",
+    "@tanstack/react-query-devtools": "^5.28.7",
+    "axios-mock-adapter": "^1.21.2",
     "axios": "^1.6.7",
     "clsx": "^2.1.0",
+    "lucide-react": "^0.344.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "react-hook-form": "^7.49.3",
+    "react-router-dom": "^6.22.3",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.4.2",
+    "@testing-library/react": "^14.2.1",
     "@types/react": "^18.2.46",
     "@types/react-dom": "^18.2.18",
     "autoprefixer": "^10.4.17",
